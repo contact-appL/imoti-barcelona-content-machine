@@ -24,3 +24,6 @@ V1 foundation for a private content-management workspace for the “Имоти �
 
 ## Important
 V1 does not claim that Supabase or Meta publishing is connected yet. Integrations will be marked active only after credentials, permissions and real API capabilities are verified.
+
+
+<!-- Deployment trigger: Supabase secrets refreshed 2026-10-04 -->
