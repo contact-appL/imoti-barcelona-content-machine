@@ -14,7 +14,7 @@ async function initSupabase() {
   }
 }
 
-const nav = [["dashboard","⌂ Dashboard"],["inbox","Inbox"],["approved","Одобрени теми"],["create","Създай публикация"],["idea","Моя идея"],["calendar","Календар"],["archive","Архив"],["brand","Моят бранд"],["settings","Настройки"],["integrations","Интеграции"]];
+const nav = [["dashboard","⌂ Dashboard"],["inbox","Inbox"],["approved","Одобрени теми"],["create","Създай публикация"],["idea","Моя идея"],["calendar","Календар"],["archive","Архив"],["profile","Моят профил"],["brand","Моят бранд"],["settings","Настройки"],["integrations","Интеграции"]];
 const navigation = document.querySelector("#navigation");
 const app = document.querySelector("#app");
 
@@ -126,6 +126,59 @@ function brand() {
   `;
 }
 
+async function profile() {
+  if (!state.user) return "";
+  let profileData = null;
+  const result = await supabase.from("profiles").select("*").eq("id", state.user.id).maybeSingle();
+  if (!result.error) profileData = result.data;
+  if (!state.brand) {
+    const created = await supabase.from("brands").insert({
+      user_id: state.user.id,
+      name: "Имоти в Барселона",
+      description: "Помощ на българи при покупка на имот в Барселона, Каталуния и Испания.",
+      positioning: "Ние сме до клиента, не до агенцията.",
+      primary_language: "bg",
+      country: "Spain",
+      regions: ["Barcelona","Badalona","Santa Coloma","L’Hospitalet","Torrevieja"],
+      audiences: ["Български родители на студенти","Българи с капитал за инвестиция","Млади двойки за първо жилище","Българи, които живеят или се местят в Испания"],
+      content_pillars: ["Покупка на имот","Инвестиции","Студенти","Първо жилище","Живот в Испания","Пазар и новини","Квартали","Реални оферти"],
+      visual_style: "Бяло, сиво, черно; минималистично, професионално, елегантно; реалистична фотография.",
+      default_cta: "Пиши ни директно в WhatsApp.",
+      whatsapp_url: "https://wa.me/34691917074",
+      instagram_url: "https://www.instagram.com/imotibarcelona/"
+    }).select("*").single();
+    if (!created.error) state.brand = created.data;
+  }
+  const b = state.brand || {};
+  return `
+    <h1>Моят профил</h1>
+    <p class="subtitle">Тук въвеждаш информацията, която машината ще използва за твоя бранд и социалните профили.</p>
+    <div class="card section-card">
+      <h2>Личен профил</h2>
+      <form id="profileForm" class="form-card">
+        <label>Име<input id="profileName" value="${esc(profileData?.full_name || "")}" placeholder="Твоето име"></label>
+        <label>Имейл<input value="${esc(state.user.email || "")}" disabled></label>
+        <button class="primary" type="submit">Запази профила</button>
+      </form>
+    </div>
+    <div class="card section-card">
+      <h2>Социални профили</h2>
+      <form id="brandProfilesForm" class="form-card">
+        <label>Instagram<input id="instagramUrl" type="url" value="${esc(b.instagram_url || "")}" placeholder="https://www.instagram.com/..."></label>
+        <label>Facebook<input id="facebookUrl" type="url" value="${esc(b.facebook_url || "")}" placeholder="https://www.facebook.com/..."></label>
+        <label>TikTok<input id="tiktokUrl" type="url" value="${esc(b.tiktok_url || "")}" placeholder="https://www.tiktok.com/@..."></label>
+        <label>WhatsApp<input id="whatsappUrl" type="url" value="${esc(b.whatsapp_url || "")}" placeholder="https://wa.me/..."></label>
+        <button class="primary" type="submit">Запази социалните профили</button>
+      </form>
+    </div>
+    <div class="card section-card">
+      <h2>Бранд</h2>
+      <p><strong>Имоти в Барселона</strong></p>
+      <p>Следващата стъпка е тук да направим всички бранд настройки editable — аудитории, теми, CTA, райони, визуален стил и източници.</p>
+    </div>
+  `;
+}
+
 function settings() { return placeholder("Настройки","Тук ще управляваме честота, предпочитани часове, източници, формати и други настройки."); }
 function integrations() {
   return `
@@ -140,7 +193,7 @@ function placeholder(title,text) {
   return `<h1>${title}</h1><p class="subtitle">${text}</p><div class="empty card"><strong>Подготвено за следващата фаза.</strong><p>Няма да симулираме функционалност, която още не е свързана.</p></div>`;
 }
 
-const pages = {dashboard, inbox, approved, create, idea, calendar, archive, brand, settings, integrations};
+const pages = {dashboard, inbox, approved, create, idea, calendar, archive, profile, brand, settings, integrations};
 
 async function render(route = "dashboard") {
   await loadData();
@@ -158,8 +211,28 @@ async function render(route = "dashboard") {
     state.authMode = "login";
     await render("dashboard");
   });
-  app.innerHTML = page();
+  app.innerHTML = await page();
   navigation.querySelectorAll("[data-route]").forEach(button => button.addEventListener("click", () => render(button.dataset.route)));
+  const profileForm = document.querySelector("#profileForm");
+  if (profileForm) profileForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    const { error } = await supabase.from("profiles").upsert({ id: state.user.id, full_name: document.querySelector("#profileName").value.trim(), updated_at: new Date().toISOString() });
+    alert(error ? "Грешка при запис: " + error.message : "Профилът е записан.");
+  });
+  const brandProfilesForm = document.querySelector("#brandProfilesForm");
+  if (brandProfilesForm) brandProfilesForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!state.brand) { alert("Брандът още не е създаден."); return; }
+    const { data, error } = await supabase.from("brands").update({
+      instagram_url: document.querySelector("#instagramUrl").value.trim(),
+      facebook_url: document.querySelector("#facebookUrl").value.trim(),
+      tiktok_url: document.querySelector("#tiktokUrl").value.trim(),
+      whatsapp_url: document.querySelector("#whatsappUrl").value.trim()
+    }).eq("id", state.brand.id).select("*").single();
+    if (error) { alert("Грешка при запис: " + error.message); return; }
+    state.brand = data;
+    alert("Социалните профили са записани.");
+  });
   const form = document.querySelector("#ideaForm");
   if (form) {
     form.addEventListener("submit", async event => {
