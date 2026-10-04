@@ -127,58 +127,89 @@ function brand() {
 }
 
 async function profile() {
-  if (!state.user) return "";
-  let profileData = null;
-  const result = await supabase.from("profiles").select("*").eq("id", state.user.id).maybeSingle();
-  if (!result.error) profileData = result.data;
-  if (!state.brand) {
-    const created = await supabase.from("brands").insert({
-      user_id: state.user.id,
-      name: "Имоти в Барселона",
-      description: "Помощ на българи при покупка на имот в Барселона, Каталуния и Испания.",
-      positioning: "Ние сме до клиента, не до агенцията.",
-      primary_language: "bg",
-      country: "Spain",
-      regions: ["Barcelona","Badalona","Santa Coloma","L’Hospitalet","Torrevieja"],
-      audiences: ["Български родители на студенти","Българи с капитал за инвестиция","Млади двойки за първо жилище","Българи, които живеят или се местят в Испания"],
-      content_pillars: ["Покупка на имот","Инвестиции","Студенти","Първо жилище","Живот в Испания","Пазар и новини","Квартали","Реални оферти"],
-      visual_style: "Бяло, сиво, черно; минималистично, професионално, елегантно; реалистична фотография.",
-      default_cta: "Пиши ни директно в WhatsApp.",
-      whatsapp_url: "https://wa.me/34691917074",
-      instagram_url: "https://www.instagram.com/imotibarcelona/"
-    }).select("*").single();
-    if (!created.error) state.brand = created.data;
+  if (!state.user) {
+    return `
+      <h1>Моят профил</h1>
+      <div class="empty card">
+        <strong>Няма активна сесия.</strong>
+        <p>Излез и влез отново, за да заредим личния ти профил.</p>
+      </div>
+    `;
   }
-  const b = state.brand || {};
-  return `
-    <h1>Моят профил</h1>
-    <p class="subtitle">Тук въвеждаш информацията, която машината ще използва за твоя бранд и социалните профили.</p>
-    <div class="card section-card">
-      <h2>Личен профил</h2>
-      <form id="profileForm" class="form-card">
-        <label>Име<input id="profileName" value="${esc(profileData?.full_name || "")}" placeholder="Твоето име"></label>
-        <label>Имейл<input value="${esc(state.user.email || "")}" disabled></label>
-        <button class="primary" type="submit">Запази профила</button>
-      </form>
-    </div>
-    <div class="card section-card">
-      <h2>Социални профили</h2>
-      <form id="brandProfilesForm" class="form-card">
-        <label>Instagram<input id="instagramUrl" type="url" value="${esc(b.instagram_url || "")}" placeholder="https://www.instagram.com/..."></label>
-        <label>Facebook<input id="facebookUrl" type="url" value="${esc(b.facebook_url || "")}" placeholder="https://www.facebook.com/..."></label>
-        <label>TikTok<input id="tiktokUrl" type="url" value="${esc(b.tiktok_url || "")}" placeholder="https://www.tiktok.com/@..."></label>
-        <label>WhatsApp<input id="whatsappUrl" type="url" value="${esc(b.whatsapp_url || "")}" placeholder="https://wa.me/..."></label>
-        <button class="primary" type="submit">Запази социалните профили</button>
-      </form>
-    </div>
-    <div class="card section-card">
-      <h2>Бранд</h2>
-      <p><strong>Имоти в Барселона</strong></p>
-      <p>Следващата стъпка е тук да направим всички бранд настройки editable — аудитории, теми, CTA, райони, визуален стил и източници.</p>
-    </div>
-  `;
-}
 
+  try {
+    let profileData = null;
+    const result = await supabase.from("profiles").select("*").eq("id", state.user.id).maybeSingle();
+    if (result.error) console.warn("Profile load warning:", result.error);
+    profileData = result.data || null;
+
+    if (!state.brand) {
+      const created = await supabase.from("brands").insert({
+        user_id: state.user.id,
+        name: "Имоти в Барселона",
+        description: "Помощ на българи при покупка на имот в Барселона, Каталуния и Испания.",
+        positioning: "Ние сме до клиента, не до агенцията.",
+        primary_language: "bg",
+        country: "Spain",
+        regions: ["Barcelona","Badalona","Santa Coloma","L’Hospitalet","Torrevieja"],
+        audiences: ["Български родители на студенти","Българи с капитал за инвестиция","Млади двойки за първо жилище","Българи, които живеят или се местят в Испания"],
+        content_pillars: ["Покупка на имот","Инвестиции","Студенти","Първо жилище","Живот в Испания","Пазар и новини","Квартали","Реални оферти"],
+        visual_style: "Бяло, сиво, черно; минималистично, професионално, елегантно; реалистична фотография.",
+        default_cta: "Пиши ни директно в WhatsApp.",
+        whatsapp_url: "https://wa.me/34691917074",
+        instagram_url: "https://www.instagram.com/imotibarcelona/"
+      }).select("*").single();
+
+      if (created.error) {
+        console.warn("Brand creation warning:", created.error);
+      } else {
+        state.brand = created.data;
+      }
+    }
+
+    const b = state.brand || {};
+
+    return `
+      <h1>Моят профил</h1>
+      <p class="subtitle">Тук въвеждаш информацията, която машината ще използва за твоя бранд и социалните профили.</p>
+
+      <div class="card section-card">
+        <h2>Личен профил</h2>
+        <form id="profileForm" class="form-card">
+          <label>Име<input id="profileName" value="${esc(profileData?.full_name || "")}" placeholder="Твоето име"></label>
+          <label>Имейл<input value="${esc(state.user.email || "")}" disabled></label>
+          <button class="primary" type="submit">Запази профила</button>
+        </form>
+      </div>
+
+      <div class="card section-card">
+        <h2>Социални профили</h2>
+        <form id="brandProfilesForm" class="form-card">
+          <label>Instagram<input id="instagramUrl" type="url" value="${esc(b.instagram_url || "")}" placeholder="https://www.instagram.com/..."></label>
+          <label>Facebook<input id="facebookUrl" type="url" value="${esc(b.facebook_url || "")}" placeholder="https://www.facebook.com/..."></label>
+          <label>TikTok<input id="tiktokUrl" type="url" value="${esc(b.tiktok_url || "")}" placeholder="https://www.tiktok.com/@..."></label>
+          <label>WhatsApp<input id="whatsappUrl" type="url" value="${esc(b.whatsapp_url || "")}" placeholder="https://wa.me/..."></label>
+          <button class="primary" type="submit">Запази социалните профили</button>
+        </form>
+      </div>
+
+      <div class="card section-card">
+        <h2>Бранд</h2>
+        <p><strong>Имоти в Барселона</strong></p>
+        <p>Тук по-късно ще можем да редактираме аудитории, теми, CTA, райони, визуален стил и източници.</p>
+      </div>
+    `;
+  } catch (error) {
+    console.error("Profile page failed:", error);
+    return `
+      <h1>Моят профил</h1>
+      <div class="empty card">
+        <strong>Профилът не можа да се зареди.</strong>
+        <p>Системата е влязла успешно, но има проблем при зареждането на данните. Не е необходимо да променяш нищо — ще го поправим от системата.</p>
+      </div>
+    `;
+  }
+}
 function settings() { return placeholder("Настройки","Тук ще управляваме честота, предпочитани часове, източници, формати и други настройки."); }
 function integrations() {
   return `
