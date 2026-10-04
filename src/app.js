@@ -6,7 +6,7 @@ async function initSupabase() {
   try {
     const config = window.SUPABASE_CONFIG || {};
     if (!config.url || !config.publishableKey) return;
-    const createClient = window.supabaseClient?.createClient;
+    const createClient = window.supabase?.createClient;
     if (!createClient) throw new Error("Supabase client library failed to load.");
     supabaseClient = createClient(config.url, config.publishableKey);
   } catch (error) {
