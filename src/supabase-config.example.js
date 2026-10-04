@@ -1,0 +1,1 @@
+// Example only. The deployment workflow creates the real supabase-config.js from GitHub Secrets.\nwindow.SUPABASE_CONFIG = { url: "", publishableKey: "" };\n
