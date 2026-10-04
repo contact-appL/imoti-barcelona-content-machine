@@ -1,0 +1,10 @@
+{
+  "name": "Имоти в Барселона",
+  "primaryLanguage": "bg",
+  "locations": ["Barcelona", "Badalona", "Santa Coloma", "L’Hospitalet", "Torrevieja", "Spain"],
+  "audience": ["Bulgarian parents of students", "Bulgarian real-estate investors", "Young couples buying a first home", "Bulgarians moving to or living in Spain"],
+  "positioning": "Ние сме до клиента, не до агенцията.",
+  "ctaUrl": "https://wa.me/34691917074",
+  "visualStyle": {"colors": ["white", "gray", "black"], "style": "minimalist, professional, elegant", "imageStyle": "realistic editorial photography", "avoid": ["obvious AI artifacts", "large text on images", "loud colors", "cursive fonts", "fake luxury", "clutter"]},
+  "publishing": {"facebook": true, "instagram": true}
+}
