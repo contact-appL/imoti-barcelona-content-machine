@@ -17,9 +17,19 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Validate Supabase secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          test -n "$SUPABASE_URL" || (echo "SUPABASE_URL is missing" && exit 1)
+          test -n "$SUPABASE_PUBLISHABLE_KEY" || (echo "SUPABASE_PUBLISHABLE_KEY is missing" && exit 1)
 
       - name: Create Supabase runtime config
         env:
@@ -28,8 +38,8 @@ jobs:
         run: |
           cat > src/supabase-config.js <<EOF
           window.SUPABASE_CONFIG = {
-            url: "${SUPABASE_URL}",
-            publishableKey: "${SUPABASE_PUBLISHABLE_KEY}"
+            url: "$SUPABASE_URL",
+            publishableKey: "$SUPABASE_PUBLISHABLE_KEY"
           };
           EOF
 
