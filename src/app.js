@@ -1,14 +1,14 @@
-let supabase = null;
+let supabaseClient = null;
 let supabaseError = null;
 
 async function initSupabase() {
-  if (supabase || supabaseError) return;
+  if (supabaseClient || supabaseError) return;
   try {
     const config = window.SUPABASE_CONFIG || {};
     if (!config.url || !config.publishableKey) return;
-    const createClient = window.supabase?.createClient;
+    const createClient = window.supabaseClient?.createClient;
     if (!createClient) throw new Error("Supabase client library failed to load.");
-    supabase = createClient(config.url, config.publishableKey);
+    supabaseClient = createClient(config.url, config.publishableKey);
   } catch (error) {
     console.error("Supabase init failed:", error);
     supabaseError = error;
@@ -23,17 +23,17 @@ const state = { ideas: [], topics: [], posts: [], brand: null, user: null, authM
 
 async function loadData() {
   await initSupabase();
-  if (!supabase) return;
+  if (!supabaseClient) return;
   try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError) throw userError;
     state.user = user;
     if (!user) return;
     const [ideas, topics, posts, brands] = await Promise.all([
-      supabase.from("manual_ideas").select("*").order("created_at", { ascending: false }),
-      supabase.from("topics").select("*").order("created_at", { ascending: false }),
-      supabase.from("posts").select("*").order("created_at", { ascending: false }),
-      supabase.from("brands").select("*").order("created_at", { ascending: true }).limit(1)
+      supabaseClient.from("manual_ideas").select("*").order("created_at", { ascending: false }),
+      supabaseClient.from("topics").select("*").order("created_at", { ascending: false }),
+      supabaseClient.from("posts").select("*").order("created_at", { ascending: false }),
+      supabaseClient.from("brands").select("*").order("created_at", { ascending: true }).limit(1)
     ]);
     if (ideas.error) throw ideas.error;
     if (topics.error) throw topics.error;
@@ -74,7 +74,7 @@ function dashboard() {
   return `
     <h1>Dashboard</h1>
     <p class="subtitle">Твоят център за съдържание за „Имоти в Барселона“.</p>
-    <div class="notice"><strong>${supabase ? "Supabase е свързан." : "Supabase още не е конфигуриран."}</strong> ${state.user ? "Dashboard-ът чете реални данни от твоя workspace." : "Следващата стъпка е вход в системата."}</div>
+    <div class="notice"><strong>${supabaseClient ? "Supabase е свързан." : "Supabase още не е конфигуриран."}</strong> ${state.user ? "Dashboard-ът чете реални данни от твоя workspace." : "Следващата стъпка е вход в системата."}</div>
     <div class="grid">
       <div class="card"><h3>Inbox</h3><div class="metric">${state.topics.filter(t => t.status === "inbox").length}</div><span class="badge">актуални теми</span></div>
       <div class="card"><h3>Одобрени теми</h3><div class="metric">${state.topics.filter(t => t.status === "approved").length}</div><span class="badge">за създаване</span></div>
@@ -140,12 +140,12 @@ async function profile() {
 
   try {
     let profileData = null;
-    const result = await supabase.from("profiles").select("*").eq("id", state.user.id).maybeSingle();
+    const result = await supabaseClient.from("profiles").select("*").eq("id", state.user.id).maybeSingle();
     if (result.error) console.warn("Profile load warning:", result.error);
     profileData = result.data || null;
 
     if (!state.brand) {
-      const created = await supabase.from("brands").insert({
+      const created = await supabaseClient.from("brands").insert({
         user_id: state.user.id,
         name: "Имоти в Барселона",
         description: "Помощ на българи при покупка на имот в Барселона, Каталуния и Испания.",
@@ -248,15 +248,15 @@ async function render(route = "dashboard") {
       const email = document.querySelector("#authEmail").value.trim();
       const password = document.querySelector("#authPassword").value;
 
-      if (!supabase) {
+      if (!supabaseClient) {
         state.authMessage = "Supabase не е конфигуриран.";
         await render("dashboard");
         return;
       }
 
       const result = state.authMode === "register"
-        ? await supabase.auth.signUp({ email, password })
-        : await supabase.auth.signInWithPassword({ email, password });
+        ? await supabaseClient.auth.signUp({ email, password })
+        : await supabaseClient.auth.signInWithPassword({ email, password });
 
       if (result.error) {
         state.authMessage = result.error.message;
@@ -283,7 +283,7 @@ async function render(route = "dashboard") {
   navigation.insertAdjacentHTML("beforeend", '<button class="logout" id="logoutButton">Изход</button>');
   const logoutButton = document.querySelector("#logoutButton");
   logoutButton.addEventListener("click", async () => {
-    await supabase?.auth.signOut();
+    await supabaseClient?.auth.signOut();
     state.user = null;
     state.ideas = [];
     state.topics = [];
@@ -297,14 +297,14 @@ async function render(route = "dashboard") {
   const profileForm = document.querySelector("#profileForm");
   if (profileForm) profileForm.addEventListener("submit", async event => {
     event.preventDefault();
-    const { error } = await supabase.from("profiles").upsert({ id: state.user.id, full_name: document.querySelector("#profileName").value.trim(), updated_at: new Date().toISOString() });
+    const { error } = await supabaseClient.from("profiles").upsert({ id: state.user.id, full_name: document.querySelector("#profileName").value.trim(), updated_at: new Date().toISOString() });
     alert(error ? "Грешка при запис: " + error.message : "Профилът е записан.");
   });
   const brandProfilesForm = document.querySelector("#brandProfilesForm");
   if (brandProfilesForm) brandProfilesForm.addEventListener("submit", async event => {
     event.preventDefault();
     if (!state.brand) { alert("Брандът още не е създаден."); return; }
-    const { data, error } = await supabase.from("brands").update({
+    const { data, error } = await supabaseClient.from("brands").update({
       instagram_url: document.querySelector("#instagramUrl").value.trim(),
       facebook_url: document.querySelector("#facebookUrl").value.trim(),
       tiktok_url: document.querySelector("#tiktokUrl").value.trim(),
@@ -318,16 +318,16 @@ async function render(route = "dashboard") {
   if (form) {
     form.addEventListener("submit", async event => {
       event.preventDefault();
-      if (!supabase || !state.user) { alert("Няма активен вход в системата."); return; }
-      const { error } = await supabase.from("manual_ideas").insert({ user_id: state.user.id, brand_id: state.brand?.id || null, title: document.querySelector("#ideaTitle").value.trim(), notes: document.querySelector("#ideaNotes").value.trim() });
+      if (!supabaseClient || !state.user) { alert("Няма активен вход в системата."); return; }
+      const { error } = await supabaseClient.from("manual_ideas").insert({ user_id: state.user.id, brand_id: state.brand?.id || null, title: document.querySelector("#ideaTitle").value.trim(), notes: document.querySelector("#ideaNotes").value.trim() });
       if (error) { alert("Грешка при запис: " + error.message); return; }
       await render("idea");
     });
   }
   document.querySelectorAll(".delete").forEach(button => button.addEventListener("click", async () => {
-    if (!supabase || !state.user) return;
+    if (!supabaseClient || !state.user) return;
     const item = state.ideas[Number(button.dataset.index)];
-    const { error } = await supabase.from("manual_ideas").delete().eq("id", item.id);
+    const { error } = await supabaseClient.from("manual_ideas").delete().eq("id", item.id);
     if (error) { alert("Грешка при изтриване: " + error.message); return; }
     await render("idea");
   }));
