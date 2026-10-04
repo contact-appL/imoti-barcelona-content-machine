@@ -1,24 +1,45 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const supabaseConfig = window.SUPABASE_CONFIG || {};
+const supabase = supabaseConfig.url && supabaseConfig.publishableKey
+  ? createClient(supabaseConfig.url, supabaseConfig.publishableKey)
+  : null;
+
 const nav = [["dashboard","⌂ Dashboard"],["inbox","Inbox"],["approved","Одобрени теми"],["create","Създай публикация"],["idea","Моя идея"],["calendar","Календар"],["archive","Архив"],["brand","Моят бранд"],["settings","Настройки"],["integrations","Интеграции"]];
 const navigation = document.querySelector("#navigation");
 const app = document.querySelector("#app");
 
-const state = {
-  ideas: JSON.parse(localStorage.getItem("imotiIdeas") || "[]")
-};
+const state = { ideas: [], topics: [], posts: [], brand: null, user: null };
+
+async function loadData() {
+  if (!supabase) return;
+  const { data: { user } } = await supabase.auth.getUser();
+  state.user = user;
+  if (!user) return;
+  const [ideas, topics, posts, brands] = await Promise.all([
+    supabase.from("manual_ideas").select("*").order("created_at", { ascending: false }),
+    supabase.from("topics").select("*").order("created_at", { ascending: false }),
+    supabase.from("posts").select("*").order("created_at", { ascending: false }),
+    supabase.from("brands").select("*").order("created_at", { ascending: true }).limit(1)
+  ]);
+  state.ideas = ideas.data || [];
+  state.topics = topics.data || [];
+  state.posts = posts.data || [];
+  state.brand = brands.data?.[0] || null;
+}
 
 const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;" }[ch]));
-const save = () => localStorage.setItem("imotiIdeas", JSON.stringify(state.ideas));
 
 function dashboard() {
   return `
     <h1>Dashboard</h1>
     <p class="subtitle">Твоят център за съдържание за „Имоти в Барселона“.</p>
-    <div class="notice"><strong>V1 Foundation:</strong> интерфейсът работи локално. Supabase, Content Hunter и Meta ще бъдат включени след реална интеграция и тест.</div>
+    <div class="notice"><strong>${supabase ? "Supabase е свързан." : "Supabase още не е конфигуриран."}</strong> ${state.user ? "Dashboard-ът чете реални данни от твоя workspace." : "Следващата стъпка е вход в системата."}</div>
     <div class="grid">
-      <div class="card"><h3>Inbox</h3><div class="metric">0</div><span class="badge">актуални теми</span></div>
-      <div class="card"><h3>Одобрени теми</h3><div class="metric">0</div><span class="badge">за създаване</span></div>
-      <div class="card"><h3>Мои идеи</h3><div class="metric">${state.ideas.length}</div><span class="badge">запазени локално</span></div>
-      <div class="card"><h3>Тази седмица</h3><div class="metric">0</div><span class="badge">публикации</span></div>
+      <div class="card"><h3>Inbox</h3><div class="metric">${state.topics.filter(t => t.status === "inbox").length}</div><span class="badge">актуални теми</span></div>
+      <div class="card"><h3>Одобрени теми</h3><div class="metric">${state.topics.filter(t => t.status === "approved").length}</div><span class="badge">за създаване</span></div>
+      <div class="card"><h3>Мои идеи</h3><div class="metric">${state.ideas.length}</div><span class="badge">в Supabase</span></div>
+      <div class="card"><h3>Тази седмица</h3><div class="metric">${state.posts.length}</div><span class="badge">записани публикации</span></div>
     </div>
     <div class="card section-card"><h2>Следваща стъпка</h2><p>Когато свържем Supabase, тези данни ще станат лични за твоя workspace и няма да се губят при смяна на устройство.</p></div>
   `;
@@ -28,7 +49,7 @@ function inbox() {
   return `
     <h1>Inbox</h1>
     <p class="subtitle">Тук ще влизат 10-те най-релевантни теми от Content Hunter.</p>
-    <div class="empty card"><strong>Все още няма събрани теми.</strong><p>Това е умишлено — няма да показваме измислени или стари новини. Следващата фаза ще свърже одобрени източници и проверка на датата.</p></div>
+    <div class="empty card"><strong>Все още няма събрани теми.</strong><p>Inbox вече е свързан със Supabase и ще показва реални теми, когато Content Hunter започне да ги записва.</p></div>
   `;
 }
 
@@ -82,7 +103,8 @@ function placeholder(title,text) {
 
 const pages = {dashboard, inbox, approved, create, idea, calendar, archive, brand, settings, integrations};
 
-function render(route = "dashboard") {
+async function render(route = "dashboard") {
+  await loadData();
   const page = pages[route] || dashboard;
   navigation.innerHTML = nav.map(([key,label]) => `<button class="${key === route ? "active" : ""}" data-route="${key}">${label}</button>`).join("");
   app.innerHTML = page();
@@ -91,15 +113,18 @@ function render(route = "dashboard") {
   if (form) {
     form.addEventListener("submit", event => {
       event.preventDefault();
-      state.ideas.unshift({title: document.querySelector("#ideaTitle").value.trim(), notes: document.querySelector("#ideaNotes").value.trim(), createdAt: new Date().toLocaleString("bg-BG")});
-      save();
-      render("idea");
+      if (!supabase || !state.user) { alert("Няма активен вход в системата."); return; }
+      const { error } = await supabase.from("manual_ideas").insert({ user_id: state.user.id, brand_id: state.brand?.id || null, title: document.querySelector("#ideaTitle").value.trim(), notes: document.querySelector("#ideaNotes").value.trim() });
+      if (error) { alert("Грешка при запис: " + error.message); return; }
+      await render("idea");
     });
   }
   document.querySelectorAll(".delete").forEach(button => button.addEventListener("click", () => {
-    state.ideas.splice(Number(button.dataset.index), 1);
-    save();
-    render("idea");
+    if (!supabase || !state.user) return;
+    const item = state.ideas[Number(button.dataset.index)];
+    const { error } = await supabase.from("manual_ideas").delete().eq("id", item.id);
+    if (error) { alert("Грешка при изтриване: " + error.message); return; }
+    await render("idea");
   }));
 }
 render();
