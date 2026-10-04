@@ -30,6 +30,8 @@ jobs:
         run: |
           test -n "$SUPABASE_URL" || (echo "SUPABASE_URL is missing" && exit 1)
           test -n "$SUPABASE_PUBLISHABLE_KEY" || (echo "SUPABASE_PUBLISHABLE_KEY is missing" && exit 1)
+          echo "$SUPABASE_URL" | grep -Eq "^https://[^/]+\\.supabase\\.co$" || (echo "SUPABASE_URL must be the Supabase project URL, e.g. https://PROJECT.supabase.co" && exit 1)
+          echo "$SUPABASE_PUBLISHABLE_KEY" | grep -Eq "^sb_publishable_" || (echo "SUPABASE_PUBLISHABLE_KEY must be a publishable key, not a secret key" && exit 1)
 
       - name: Create Supabase runtime config
         env:
