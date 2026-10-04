@@ -228,6 +228,55 @@ const pages = {dashboard, inbox, approved, create, idea, calendar, archive, prof
 
 async function render(route = "dashboard") {
   await loadData();
+
+  if (!state.user) {
+    navigation.innerHTML = "";
+    app.innerHTML = authPanel();
+
+    const authSwitch = document.querySelector("#authSwitch");
+    if (authSwitch) authSwitch.addEventListener("click", () => {
+      state.authMode = state.authMode === "login" ? "register" : "login";
+      state.authMessage = "";
+      render("dashboard");
+    });
+
+    const authForm = document.querySelector("#authForm");
+    if (authForm) authForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      state.authMessage = "";
+      const email = document.querySelector("#authEmail").value.trim();
+      const password = document.querySelector("#authPassword").value;
+
+      if (!supabase) {
+        state.authMessage = "Supabase не е конфигуриран.";
+        await render("dashboard");
+        return;
+      }
+
+      const result = state.authMode === "register"
+        ? await supabase.auth.signUp({ email, password })
+        : await supabase.auth.signInWithPassword({ email, password });
+
+      if (result.error) {
+        state.authMessage = result.error.message;
+        await render("dashboard");
+        return;
+      }
+
+      if (state.authMode === "register" && !result.data.session) {
+        state.authMessage = "Регистрацията е създадена. Провери имейла си и потвърди адреса, след което влез.";
+        state.authMode = "login";
+        await render("dashboard");
+        return;
+      }
+
+      state.user = result.data.user;
+      state.authMessage = "";
+      await render("dashboard");
+    });
+    return;
+  }
+
   const page = pages[route] || dashboard;
   navigation.innerHTML = nav.map(([key,label]) => `<button class="${key === route ? "active" : ""}" data-route="${key}">${label}</button>`).join("");
   navigation.insertAdjacentHTML("beforeend", '<button class="logout" id="logoutButton">Изход</button>');
