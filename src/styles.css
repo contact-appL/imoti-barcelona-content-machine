@@ -25,3 +25,13 @@ button.ghost { background:#fff; border:1px solid #ccc; border-radius:8px; paddin
 .list-item { display:flex; justify-content:space-between; gap:20px; align-items:flex-start; padding:16px 0; border-bottom:1px solid #eee; }
 .list-item p { margin:6px 0; color:#555; } .list-item small { color:#888; }
 @media (max-width:760px) { .sidebar{width:70px}.sidebar button{font-size:0}.sidebar button::first-letter{font-size:18px}.main{padding:20px}.topbar{padding:0 16px} }
+
+.auth-wrap { min-height:70vh; display:flex; align-items:center; justify-content:center; }
+.auth-card { width:min(460px,100%); background:#fff; border:1px solid #ddd; border-radius:16px; padding:32px; box-shadow:0 8px 30px rgba(0,0,0,.04); }
+.auth-brand { font-weight:700; margin-bottom:28px; }
+.auth-card h1 { margin-bottom:8px; }
+.auth-card .form-card { max-width:none; margin-top:24px; }
+.auth-switch { width:100%; margin-top:14px; padding:11px 12px; border:0; background:transparent; cursor:pointer; color:#333; }
+.auth-switch:hover { text-decoration:underline; }
+.auth-message { margin-top:18px; padding:12px 14px; border:1px solid #ccc; border-radius:8px; background:#f7f7f5; color:#444; line-height:1.45; }
+.logout { margin-top:20px !important; border-top:1px solid #eee !important; border-radius:0 !important; padding-top:18px !important; }
