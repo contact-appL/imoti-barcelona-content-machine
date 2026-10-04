@@ -66,7 +66,7 @@ function idea() {
       <button class="primary" type="submit">Запази идеята</button>
     </form>
     <div class="section-card"><h2>Запазени идеи</h2>${state.ideas.length ? state.ideas.map((item,index) => `
-      <div class="list-item"><div><strong>${esc(item.title)}</strong><p>${esc(item.notes || "Без бележки")}</p><small>${esc(item.createdAt)}</small></div><button class="ghost delete" data-index="${index}">Изтрий</button></div>`).join("") : '<div class="empty card">Все още няма идеи.</div>'}</div>
+      <div class="list-item"><div><strong>${esc(item.title)}</strong><p>${esc(item.notes || "Без бележки")}</p><small>${esc(item.created_at || "")}</small></div><button class="ghost delete" data-index="${index}">Изтрий</button></div>`).join("") : '<div class="empty card">Все още няма идеи.</div>'}</div>
   `;
 }
 
@@ -111,7 +111,7 @@ async function render(route = "dashboard") {
   navigation.querySelectorAll("[data-route]").forEach(button => button.addEventListener("click", () => render(button.dataset.route)));
   const form = document.querySelector("#ideaForm");
   if (form) {
-    form.addEventListener("submit", event => {
+    form.addEventListener("submit", async event => {
       event.preventDefault();
       if (!supabase || !state.user) { alert("Няма активен вход в системата."); return; }
       const { error } = await supabase.from("manual_ideas").insert({ user_id: state.user.id, brand_id: state.brand?.id || null, title: document.querySelector("#ideaTitle").value.trim(), notes: document.querySelector("#ideaNotes").value.trim() });
@@ -119,7 +119,7 @@ async function render(route = "dashboard") {
       await render("idea");
     });
   }
-  document.querySelectorAll(".delete").forEach(button => button.addEventListener("click", () => {
+  document.querySelectorAll(".delete").forEach(button => button.addEventListener("click", async () => {
     if (!supabase || !state.user) return;
     const item = state.ideas[Number(button.dataset.index)];
     const { error } = await supabase.from("manual_ideas").delete().eq("id", item.id);
