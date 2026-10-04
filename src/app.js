@@ -1,9 +1,18 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+let supabase = null;
+let supabaseError = null;
 
-const supabaseConfig = window.SUPABASE_CONFIG || {};
-const supabase = supabaseConfig.url && supabaseConfig.publishableKey
-  ? createClient(supabaseConfig.url, supabaseConfig.publishableKey)
-  : null;
+async function initSupabase() {
+  if (supabase || supabaseError) return;
+  try {
+    const config = window.SUPABASE_CONFIG || {};
+    if (!config.url || !config.publishableKey) return;
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    supabase = createClient(config.url, config.publishableKey);
+  } catch (error) {
+    console.error("Supabase init failed:", error);
+    supabaseError = error;
+  }
+}
 
 const nav = [["dashboard","⌂ Dashboard"],["inbox","Inbox"],["approved","Одобрени теми"],["create","Създай публикация"],["idea","Моя идея"],["calendar","Календар"],["archive","Архив"],["brand","Моят бранд"],["settings","Настройки"],["integrations","Интеграции"]];
 const navigation = document.querySelector("#navigation");
@@ -12,20 +21,30 @@ const app = document.querySelector("#app");
 const state = { ideas: [], topics: [], posts: [], brand: null, user: null };
 
 async function loadData() {
+  await initSupabase();
   if (!supabase) return;
-  const { data: { user } } = await supabase.auth.getUser();
-  state.user = user;
-  if (!user) return;
-  const [ideas, topics, posts, brands] = await Promise.all([
-    supabase.from("manual_ideas").select("*").order("created_at", { ascending: false }),
-    supabase.from("topics").select("*").order("created_at", { ascending: false }),
-    supabase.from("posts").select("*").order("created_at", { ascending: false }),
-    supabase.from("brands").select("*").order("created_at", { ascending: true }).limit(1)
-  ]);
-  state.ideas = ideas.data || [];
-  state.topics = topics.data || [];
-  state.posts = posts.data || [];
-  state.brand = brands.data?.[0] || null;
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    state.user = user;
+    if (!user) return;
+    const [ideas, topics, posts, brands] = await Promise.all([
+      supabase.from("manual_ideas").select("*").order("created_at", { ascending: false }),
+      supabase.from("topics").select("*").order("created_at", { ascending: false }),
+      supabase.from("posts").select("*").order("created_at", { ascending: false }),
+      supabase.from("brands").select("*").order("created_at", { ascending: true }).limit(1)
+    ]);
+    if (ideas.error) throw ideas.error;
+    if (topics.error) throw topics.error;
+    if (posts.error) throw posts.error;
+    if (brands.error) throw brands.error;
+    state.ideas = ideas.data || [];
+    state.topics = topics.data || [];
+    state.posts = posts.data || [];
+    state.brand = brands.data?.[0] || null;
+  } catch (error) {
+    console.error("Supabase data load failed:", error);
+  }
 }
 
 const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;" }[ch]));
