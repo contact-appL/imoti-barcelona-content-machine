@@ -6,8 +6,7 @@ async function initSupabase() {
   try {
     const config = window.SUPABASE_CONFIG || {};
     if (!config.url || !config.publishableKey) return;
-    const createClient = window.supabase?.createClient;
-    if (!createClient) throw new Error("Supabase client library failed to load.");
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
     supabaseClient = createClient(config.url, config.publishableKey);
   } catch (error) {
     console.error("Supabase init failed:", error);
