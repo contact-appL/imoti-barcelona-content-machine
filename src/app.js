@@ -18,7 +18,7 @@ const nav = [["dashboard","⌂ Dashboard"],["inbox","Inbox"],["approved","Одо
 const navigation = document.querySelector("#navigation");
 const app = document.querySelector("#app");
 
-const state = { ideas: [], topics: [], posts: [], brand: null, user: null };
+const state = { ideas: [], topics: [], posts: [], brand: null, user: null, authMode: "login", authMessage: "" };
 
 async function loadData() {
   await initSupabase();
@@ -48,6 +48,26 @@ async function loadData() {
 }
 
 const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;" }[ch]));
+
+function authPanel() {
+  const isRegister = state.authMode === "register";
+  return `
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <div class="auth-brand">Имоти в Барселона</div>
+        <h1>${isRegister ? "Създай акаунт" : "Вход"}</h1>
+        <p class="subtitle">${isRegister ? "Създай личен workspace за Content Machine." : "Влез в своя Content Machine workspace."}</p>
+        ${state.authMessage ? `<div class="auth-message">${esc(state.authMessage)}</div>` : ""}
+        <form id="authForm" class="form-card">
+          <label>Имейл<input id="authEmail" type="email" required autocomplete="email" placeholder="you@example.com"></label>
+          <label>Парола<input id="authPassword" type="password" required minlength="6" autocomplete="${isRegister ? "new-password" : "current-password"}" placeholder="Минимум 6 символа"></label>
+          <button class="primary" type="submit">${isRegister ? "Регистрация" : "Вход"}</button>
+        </form>
+        <button class="auth-switch" id="authSwitch">${isRegister ? "Вече имам акаунт → Вход" : "Нямам акаунт → Регистрация"}</button>
+      </div>
+    </div>
+  `;
+}
 
 function dashboard() {
   return `
@@ -126,6 +146,18 @@ async function render(route = "dashboard") {
   await loadData();
   const page = pages[route] || dashboard;
   navigation.innerHTML = nav.map(([key,label]) => `<button class="${key === route ? "active" : ""}" data-route="${key}">${label}</button>`).join("");
+  navigation.insertAdjacentHTML("beforeend", '<button class="logout" id="logoutButton">Изход</button>');
+  const logoutButton = document.querySelector("#logoutButton");
+  logoutButton.addEventListener("click", async () => {
+    await supabase?.auth.signOut();
+    state.user = null;
+    state.ideas = [];
+    state.topics = [];
+    state.posts = [];
+    state.brand = null;
+    state.authMode = "login";
+    await render("dashboard");
+  });
   app.innerHTML = page();
   navigation.querySelectorAll("[data-route]").forEach(button => button.addEventListener("click", () => render(button.dataset.route)));
   const form = document.querySelector("#ideaForm");
