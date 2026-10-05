@@ -84,251 +84,76 @@ function dashboard() {
   `;
 }
 
-function inbox() {
-  return `
-    <h1>Inbox</h1>
-    <p class="subtitle">Тук ще влизат 10-те най-релевантни теми от Content Hunter.</p>
-    <div class="empty card"><strong>Все още няма събрани теми.</strong><p>Inbox вече е свързан със Supabase и ще показва реални теми, когато Content Hunter започне да ги записва.</p></div>
-  `;
-}
-
+function inbox() { return `<h1>Inbox</h1><p class="subtitle">Тук ще влизат 10-те най-релевантни теми от Content Hunter.</p><div class="empty card"><strong>Все още няма събрани теми.</strong><p>Inbox вече е свързан със Supabase и ще показва реални теми, когато Content Hunter започне да ги записва.</p></div>`; }
 function approved() { return placeholder("Одобрени теми","Тук ще се появяват темите, които си одобрила от Inbox."); }
 function create() { return placeholder("Създай публикация","Избираш тема и получаваш основен FB/Instagram текст, CTA, точно 5 hashtags, alt text, източник и визуална задача."); }
 
 function idea() {
-  return `
-    <h1>Моя идея</h1>
-    <p class="subtitle">Добави идея спонтанно, без да чакаш Content Hunter.</p>
-    <form id="ideaForm" class="card form-card">
-      <label>Заглавие на идеята<input id="ideaTitle" required maxlength="140" placeholder="Напр. Какво трябва да знае родителят преди да купи имот за студент?"></label>
-      <label>Бележки<textarea id="ideaNotes" rows="5" placeholder="Какво искаш да кажем, покажем или проверим?"></textarea></label>
-      <button class="primary" type="submit">Запази идеята</button>
-    </form>
-    <div class="section-card"><h2>Запазени идеи</h2>${state.ideas.length ? state.ideas.map((item,index) => `
-      <div class="list-item"><div><strong>${esc(item.title)}</strong><p>${esc(item.notes || "Без бележки")}</p><small>${esc(item.created_at || "")}</small></div><button class="ghost delete" data-index="${index}">Изтрий</button></div>`).join("") : '<div class="empty card">Все още няма идеи.</div>'}</div>
-  `;
+  return `<h1>Моя идея</h1><p class="subtitle">Добави идея спонтанно, без да чакаш Content Hunter.</p><form id="ideaForm" class="card form-card"><label>Заглавие на идеята<input id="ideaTitle" required maxlength="140" placeholder="Напр. Какво трябва да знае родителят преди да купи имот за студент?"></label><label>Бележки<textarea id="ideaNotes" rows="5" placeholder="Какво искаш да кажем, покажем или проверим?"></textarea></label><button class="primary" type="submit">Запази идеята</button></form><div class="section-card"><h2>Запазени идеи</h2>${state.ideas.length ? state.ideas.map((item,index) => `<div class="list-item"><div><strong>${esc(item.title)}</strong><p>${esc(item.notes || "Без бележки")}</p><small>${esc(item.created_at || "")}</small></div><button class="ghost delete" data-index="${index}">Изтрий</button></div>`).join("") : '<div class="empty card">Все още няма идеи.</div>'}</div>`;
 }
-
 function calendar() { return placeholder("Календар","Тук ще виждаш седмичния график и реалните статуси Draft, Ready, Scheduled, Published и Error."); }
 function archive() { return placeholder("Архив","Тук ще остава историята на създаденото и публикуваното съдържание."); }
-
-function brand() {
-  return `
-    <h1>Моят бранд</h1>
-    <p class="subtitle">Основните настройки, върху които Content Machine ще стъпва.</p>
-    <div class="grid">
-      <div class="card"><h3>Позициониране</h3><p>„Ние сме до клиента, не до агенцията.“</p></div>
-      <div class="card"><h3>Основен CTA</h3><p>WhatsApp: 34691917074</p></div>
-      <div class="card"><h3>Език</h3><p>Български</p></div>
-      <div class="card"><h3>Визия</h3><p>Бяло, сиво, черно · минималистично · професионално · реалистична фотография</p></div>
-    </div>
-    <div class="card section-card"><h2>Основни аудитории</h2><ul><li>Български родители на студенти</li><li>Българи с капитал за инвестиция</li><li>Млади двойки за първо жилище</li><li>Българи, които живеят или се местят в Испания</li></ul></div>
-  `;
-}
+function brand() { return `<h1>Моят бранд</h1><p class="subtitle">Основните настройки, върху които Content Machine ще стъпва.</p><div class="grid"><div class="card"><h3>Позициониране</h3><p>„Ние сме до клиента, не до агенцията.“</p></div><div class="card"><h3>Основен CTA</h3><p>WhatsApp: 34691917074</p></div><div class="card"><h3>Език</h3><p>Български</p></div><div class="card"><h3>Визия</h3><p>Бяло, сиво, черно · минималистично · професионално · реалистична фотография</p></div></div><div class="card section-card"><h2>Основни аудитории</h2><ul><li>Български родители на студенти</li><li>Българи с капитал за инвестиция</li><li>Млади двойки за първо жилище</li><li>Българи, които живеят или се местят в Испания</li></ul></div>`; }
 
 async function profile() {
-  if (!state.user) {
-    return `
-      <h1>Моят профил</h1>
-      <div class="empty card">
-        <strong>Няма активна сесия.</strong>
-        <p>Излез и влез отново, за да заредим личния ти профил.</p>
-      </div>
-    `;
-  }
-
+  if (!state.user) return `<h1>Моят профил</h1><div class="empty card"><strong>Няма активна сесия.</strong><p>Излез и влез отново, за да заредим личния ти профил.</p></div>`;
   try {
     let profileData = null;
     const result = await supabaseClient.from("profiles").select("*").eq("id", state.user.id).maybeSingle();
     if (result.error) console.warn("Profile load warning:", result.error);
     profileData = result.data || null;
-
     if (!state.brand) {
-      const created = await supabaseClient.from("brands").insert({
-        user_id: state.user.id,
-        name: "Имоти в Барселона",
-        description: "Помощ на българи при покупка на имот в Барселона, Каталуния и Испания.",
-        positioning: "Ние сме до клиента, не до агенцията.",
-        primary_language: "bg",
-        country: "Spain",
-        regions: ["Barcelona","Badalona","Santa Coloma","L’Hospitalet","Torrevieja"],
-        audiences: ["Български родители на студенти","Българи с капитал за инвестиция","Млади двойки за първо жилище","Българи, които живеят или се местят в Испания"],
-        content_pillars: ["Покупка на имот","Инвестиции","Студенти","Първо жилище","Живот в Испания","Пазар и новини","Квартали","Реални оферти"],
-        visual_style: "Бяло, сиво, черно; минималистично, професионално, елегантно; реалистична фотография.",
-        default_cta: "Пиши ни директно в WhatsApp.",
-        whatsapp_url: "https://wa.me/34691917074",
-        instagram_url: "https://www.instagram.com/imotibarcelona/"
-      }).select("*").single();
-
-      if (created.error) {
-        console.warn("Brand creation warning:", created.error);
-      } else {
-        state.brand = created.data;
-      }
+      const created = await supabaseClient.from("brands").insert({ user_id: state.user.id, name: "Имоти в Барселона", description: "Помощ на българи при покупка на имот в Барселона, Каталуния и Испания.", positioning: "Ние сме до клиента, не до агенцията.", primary_language: "bg", country: "Spain", regions: ["Barcelona","Badalona","Santa Coloma","L’Hospitalet","Torrevieja"], audiences: ["Български родители на студенти","Българи с капитал за инвестиция","Млади двойки за първо жилище","Българи, които живеят или се местят в Испания"], content_pillars: ["Покупка на имот","Инвестиции","Студенти","Първо жилище","Живот в Испания","Пазар и новини","Квартали","Реални оферти"], visual_style: "Бяло, сиво, черно; минималистично, професионално, елегантно; реалистична фотография.", default_cta: "Пиши ни директно в WhatsApp.", whatsapp_url: "https://wa.me/34691917074", instagram_url: "https://www.instagram.com/imotibarcelona/" }).select("*").single();
+      if (created.error) console.warn("Brand creation warning:", created.error); else state.brand = created.data;
     }
-
     const b = state.brand || {};
-
-    return `
-      <h1>Моят профил</h1>
-      <p class="subtitle">Тук въвеждаш информацията, която машината ще използва за твоя бранд и социалните профили.</p>
-
-      <div class="card section-card">
-        <h2>Личен профил</h2>
-        <form id="profileForm" class="form-card">
-          <label>Име<input id="profileName" value="${esc(profileData?.full_name || "")}" placeholder="Твоето име"></label>
-          <label>Имейл<input value="${esc(state.user.email || "")}" disabled></label>
-          <button class="primary" type="submit">Запази профила</button>
-        </form>
-      </div>
-
-      <div class="card section-card">
-        <h2>Социални профили</h2>
-        <form id="brandProfilesForm" class="form-card">
-          <label>Instagram<input id="instagramUrl" type="url" value="${esc(b.instagram_url || "")}" placeholder="https://www.instagram.com/..."></label>
-          <label>Facebook<input id="facebookUrl" type="url" value="${esc(b.facebook_url || "")}" placeholder="https://www.facebook.com/..."></label>
-          <label>TikTok<input id="tiktokUrl" type="url" value="${esc(b.tiktok_url || "")}" placeholder="https://www.tiktok.com/@..."></label>
-          <label>WhatsApp<input id="whatsappUrl" type="url" value="${esc(b.whatsapp_url || "")}" placeholder="https://wa.me/..."></label>
-          <button class="primary" type="submit">Запази социалните профили</button>
-        </form>
-      </div>
-
-      <div class="card section-card">
-        <h2>Бранд</h2>
-        <p><strong>Имоти в Барселона</strong></p>
-        <p>Тук по-късно ще можем да редактираме аудитории, теми, CTA, райони, визуален стил и източници.</p>
-      </div>
-    `;
-  } catch (error) {
-    console.error("Profile page failed:", error);
-    return `
-      <h1>Моят профил</h1>
-      <div class="empty card">
-        <strong>Профилът не можа да се зареди.</strong>
-        <p>Системата е влязла успешно, но има проблем при зареждането на данните. Не е необходимо да променяш нищо — ще го поправим от системата.</p>
-      </div>
-    `;
-  }
+    return `<h1>Моят профил</h1><p class="subtitle">Тук въвеждаш информацията, която машината ще използва за твоя бранд и социалните профили.</p><div class="card section-card"><h2>Личен профил</h2><form id="profileForm" class="form-card"><label>Име<input id="profileName" value="${esc(profileData?.full_name || "")}" placeholder="Твоето име"></label><label>Имейл<input value="${esc(state.user.email || "")}" disabled></label><button class="primary" type="submit">Запази профила</button></form></div><div class="card section-card"><h2>Социални профили</h2><form id="brandProfilesForm" class="form-card"><label>Instagram<input id="instagramUrl" type="url" value="${esc(b.instagram_url || "")}" placeholder="https://www.instagram.com/..."></label><label>Facebook<input id="facebookUrl" type="url" value="${esc(b.facebook_url || "")}" placeholder="https://www.facebook.com/..."></label><label>TikTok<input id="tiktokUrl" type="url" value="${esc(b.tiktok_url || "")}" placeholder="https://www.tiktok.com/@..."></label><label>WhatsApp<input id="whatsappUrl" type="url" value="${esc(b.whatsapp_url || "")}" placeholder="https://wa.me/..."></label><button class="primary" type="submit">Запази социалните профили</button></form></div><div class="card section-card"><h2>Бранд</h2><p><strong>Имоти в Барселона</strong></p><p>Тук по-късно ще можем да редактираме аудитории, теми, CTA, райони, визуален стил и източници.</p></div>`;
+  } catch (error) { console.error("Profile page failed:", error); return `<h1>Моят профил</h1><div class="empty card"><strong>Профилът не можа да се зареди.</strong><p>Системата е влязла успешно, но има проблем при зареждането на данните. Не е необходимо да променяш нищо — ще го поправим от системата.</p></div>`; }
 }
 function settings() { return placeholder("Настройки","Тук ще управляваме честота, предпочитани часове, източници, формати и други настройки."); }
-function integrations() {
-  return `
-    <h1>Интеграции</h1><p class="subtitle">Само реално свързани услуги ще бъдат показвани като активни.</p>
-    <div class="grid">
-      <div class="card"><h3>Supabase</h3><span class="badge">Не е свързан</span><p>Ще съхранява workspace, теми, публикации и настройки.</p></div>
-      <div class="card"><h3>Meta</h3><span class="badge">Не е свързан</span><p>Ще публикува/насрочва към Facebook и Instagram след проверка на разрешенията.</p></div>
-    </div>`;
-}
-
-function placeholder(title,text) {
-  return `<h1>${title}</h1><p class="subtitle">${text}</p><div class="empty card"><strong>Подготвено за следващата фаза.</strong><p>Няма да симулираме функционалност, която още не е свързана.</p></div>`;
-}
+function integrations() { return `<h1>Интеграции</h1><p class="subtitle">Само реално свързани услуги ще бъдат показвани като активни.</p><div class="grid"><div class="card"><h3>Supabase</h3><span class="badge">Не е свързан</span><p>Ще съхранява workspace, теми, публикации и настройки.</p></div><div class="card"><h3>Meta</h3><span class="badge">Не е свързан</span><p>Ще публикува/насрочва към Facebook и Instagram след проверка на разрешенията.</p></div></div>`; }
+function placeholder(title,text) { return `<h1>${title}</h1><p class="subtitle">${text}</p><div class="empty card"><strong>Подготвено за следващата фаза.</strong><p>Няма да симулираме функционалност, която още не е свързана.</p></div>`; }
 
 const pages = {dashboard, inbox, approved, create, idea, calendar, archive, profile, brand, settings, integrations};
 
 async function render(route = "dashboard") {
   await loadData();
-
   if (!state.user) {
     navigation.innerHTML = "";
     app.innerHTML = authPanel();
-
     const authSwitch = document.querySelector("#authSwitch");
-    if (authSwitch) authSwitch.addEventListener("click", () => {
-      state.authMode = state.authMode === "login" ? "register" : "login";
-      state.authMessage = "";
-      render("dashboard");
-    });
-
+    if (authSwitch) authSwitch.addEventListener("click", () => { state.authMode = state.authMode === "login" ? "register" : "login"; state.authMessage = ""; render("dashboard"); });
     const authForm = document.querySelector("#authForm");
     if (authForm) authForm.addEventListener("submit", async event => {
       event.preventDefault();
       state.authMessage = "";
       const email = document.querySelector("#authEmail").value.trim();
       const password = document.querySelector("#authPassword").value;
-
-      if (!supabaseClient) {
-        state.authMessage = "Supabase не е конфигуриран.";
-        await render("dashboard");
-        return;
-      }
-
+      if (!supabaseClient) { state.authMessage = "Supabase не е конфигуриран."; await render("dashboard"); return; }
       const result = state.authMode === "register"
-        ? await supabaseClient.auth.signUp({ email, password })
+        ? await supabaseClient.auth.signUp({ email, password, options: { emailRedirectTo: "https://contact-appl.github.io/imoti-barcelona-content-machine/" } })
         : await supabaseClient.auth.signInWithPassword({ email, password });
-
-      if (result.error) {
-        state.authMessage = result.error.message;
-        await render("dashboard");
-        return;
-      }
-
-      if (state.authMode === "register" && !result.data.session) {
-        state.authMessage = "Регистрацията е създадена. Провери имейла си и потвърди адреса, след което влез.";
-        state.authMode = "login";
-        await render("dashboard");
-        return;
-      }
-
+      if (result.error) { state.authMessage = result.error.message; await render("dashboard"); return; }
+      if (state.authMode === "register" && !result.data.session) { state.authMessage = "Регистрацията е създадена. Провери имейла си и потвърди адреса, след което влез."; state.authMode = "login"; await render("dashboard"); return; }
       state.user = result.data.user;
       state.authMessage = "";
       await render("dashboard");
     });
     return;
   }
-
   const page = pages[route] || dashboard;
   navigation.innerHTML = nav.map(([key,label]) => `<button class="${key === route ? "active" : ""}" data-route="${key}">${label}</button>`).join("");
   navigation.insertAdjacentHTML("beforeend", '<button class="logout" id="logoutButton">Изход</button>');
   const logoutButton = document.querySelector("#logoutButton");
-  logoutButton.addEventListener("click", async () => {
-    await supabaseClient?.auth.signOut();
-    state.user = null;
-    state.ideas = [];
-    state.topics = [];
-    state.posts = [];
-    state.brand = null;
-    state.authMode = "login";
-    await render("dashboard");
-  });
+  logoutButton.addEventListener("click", async () => { await supabaseClient?.auth.signOut(); state.user = null; state.ideas = []; state.topics = []; state.posts = []; state.brand = null; state.authMode = "login"; await render("dashboard"); });
   app.innerHTML = await page();
   navigation.querySelectorAll("[data-route]").forEach(button => button.addEventListener("click", () => render(button.dataset.route)));
   const profileForm = document.querySelector("#profileForm");
-  if (profileForm) profileForm.addEventListener("submit", async event => {
-    event.preventDefault();
-    const { error } = await supabaseClient.from("profiles").upsert({ id: state.user.id, full_name: document.querySelector("#profileName").value.trim(), updated_at: new Date().toISOString() });
-    alert(error ? "Грешка при запис: " + error.message : "Профилът е записан.");
-  });
+  if (profileForm) profileForm.addEventListener("submit", async event => { event.preventDefault(); const { error } = await supabaseClient.from("profiles").upsert({ id: state.user.id, full_name: document.querySelector("#profileName").value.trim(), updated_at: new Date().toISOString() }); alert(error ? "Грешка при запис: " + error.message : "Профилът е записан."); });
   const brandProfilesForm = document.querySelector("#brandProfilesForm");
-  if (brandProfilesForm) brandProfilesForm.addEventListener("submit", async event => {
-    event.preventDefault();
-    if (!state.brand) { alert("Брандът още не е създаден."); return; }
-    const { data, error } = await supabaseClient.from("brands").update({
-      instagram_url: document.querySelector("#instagramUrl").value.trim(),
-      facebook_url: document.querySelector("#facebookUrl").value.trim(),
-      tiktok_url: document.querySelector("#tiktokUrl").value.trim(),
-      whatsapp_url: document.querySelector("#whatsappUrl").value.trim()
-    }).eq("id", state.brand.id).select("*").single();
-    if (error) { alert("Грешка при запис: " + error.message); return; }
-    state.brand = data;
-    alert("Социалните профили са записани.");
-  });
+  if (brandProfilesForm) brandProfilesForm.addEventListener("submit", async event => { event.preventDefault(); if (!state.brand) { alert("Брандът още не е създаден."); return; } const { data, error } = await supabaseClient.from("brands").update({ instagram_url: document.querySelector("#instagramUrl").value.trim(), facebook_url: document.querySelector("#facebookUrl").value.trim(), tiktok_url: document.querySelector("#tiktokUrl").value.trim(), whatsapp_url: document.querySelector("#whatsappUrl").value.trim() }).eq("id", state.brand.id).select("*").single(); if (error) { alert("Грешка при запис: " + error.message); return; } state.brand = data; alert("Социалните профили са записани."); });
   const form = document.querySelector("#ideaForm");
-  if (form) {
-    form.addEventListener("submit", async event => {
-      event.preventDefault();
-      if (!supabaseClient || !state.user) { alert("Няма активен вход в системата."); return; }
-      const { error } = await supabaseClient.from("manual_ideas").insert({ user_id: state.user.id, brand_id: state.brand?.id || null, title: document.querySelector("#ideaTitle").value.trim(), notes: document.querySelector("#ideaNotes").value.trim() });
-      if (error) { alert("Грешка при запис: " + error.message); return; }
-      await render("idea");
-    });
-  }
-  document.querySelectorAll(".delete").forEach(button => button.addEventListener("click", async () => {
-    if (!supabaseClient || !state.user) return;
-    const item = state.ideas[Number(button.dataset.index)];
-    const { error } = await supabaseClient.from("manual_ideas").delete().eq("id", item.id);
-    if (error) { alert("Грешка при изтриване: " + error.message); return; }
-    await render("idea");
-  }));
+  if (form) form.addEventListener("submit", async event => { event.preventDefault(); if (!supabaseClient || !state.user) { alert("Няма активен вход в системата."); return; } const { error } = await supabaseClient.from("manual_ideas").insert({ user_id: state.user.id, brand_id: state.brand?.id || null, title: document.querySelector("#ideaTitle").value.trim(), notes: document.querySelector("#ideaNotes").value.trim() }); if (error) { alert("Грешка при запис: " + error.message); return; } await render("idea"); });
+  document.querySelectorAll(".delete").forEach(button => button.addEventListener("click", async () => { if (!supabaseClient || !state.user) return; const item = state.ideas[Number(button.dataset.index)]; const { error } = await supabaseClient.from("manual_ideas").delete().eq("id", item.id); if (error) { alert("Грешка при изтриване: " + error.message); return; } await render("idea"); }));
 }
 render();
