@@ -85,7 +85,62 @@ function dashboard() {
 }
 function inbox() { return `<h1>Inbox</h1><p class="subtitle">Тук ще влизат 10-те най-релевантни теми от Content Hunter.</p><div class="empty card"><strong>Все още няма събрани теми.</strong><p>Inbox вече е свързан със Supabase и ще показва реални теми, когато Content Hunter започне да ги записва.</p></div>`; }
 function approved() { return placeholder("Одобрени теми","Тук ще се появяват темите, които си одобрила от Inbox."); }
-function create() { return placeholder("Създай публикация","Избираш тема и получаваш основен FB/Instagram текст, CTA, точно 5 hashtags, alt text, източник и визуална задача."); }
+function create() {
+  const topics = state.topics.filter(t => t.status === "approved" || t.status === "inbox");
+  return `
+    <h1>Създай публикация</h1>
+    <p class="subtitle">Избери тема или въведи своя и генерирай готов текст за Facebook/Instagram.</p>
+    <div class="card form-card">
+      <label>Тема
+        <select id="postTopic">
+          <option value="">— Избери тема —</option>
+          ${topics.map(t => `<option value="${esc(t.id)}">${esc(t.title || t.name || "Без заглавие")}</option>`).join("")}
+        </select>
+      </label>
+      <label>Или въведи собствена тема
+        <input id="manualPostTopic" maxlength="200" placeholder="Напр. Цените на имотите в Барселона през 2026 г.">
+      </label>
+      <button class="primary" id="generatePost" type="button">Генерирай публикация</button>
+    </div>
+    <div id="generatedPost"></div>
+  `;
+}
+
+function buildPost(topic) {
+  const title = topic.trim();
+  const content = `🏠 ${title}
+
+Какво е важно да знаете, ако обмисляте покупка на имот в Барселона?
+
+Пазарът се променя постоянно и доброто решение започва с актуална информация, реалистичен бюджет и ясна стратегия. Преди да направите следващата си стъпка, проверете района, цената, разходите по сделката и потенциала на имота.
+
+Ако търсите имот в Барселона или искате професионална насока, можем да ви помогнем да се ориентирате по-лесно и уверено.`;
+
+  const cta = "📲 Пиши ни директно в WhatsApp за консултация и актуални предложения.";
+  const hashtags = "#ИмотиВБарселона #ИмотиИспания #Барселона #ИнвестицияВИмот #БългариВИспания";
+  const alt = `Имот в Барселона, Испания — ${title}`;
+  const visual = `Реалистична професионална снимка на модерен имот или улица в Барселона, естествена светлина, минималистичен премиум стил, без текст върху изображението.`;
+
+  return { title, content, cta, hashtags, alt, visual };
+}
+
+function generatedPostHtml(post) {
+  return `
+    <div class="card section-card">
+      <h2>Готова публикация</h2>
+      <label>Текст<textarea id="postContent" rows="10">${esc(post.content)}</textarea></label>
+      <label>CTA<input id="postCta" value="${esc(post.cta)}"></label>
+      <label>Hashtags<input id="postHashtags" value="${esc(post.hashtags)}"></label>
+      <label>Alt text<input id="postAlt" value="${esc(post.alt)}"></label>
+      <label>Визуална задача<textarea id="postVisual" rows="4">${esc(post.visual)}</textarea></label>
+      <div class="form-actions">
+        <button class="primary" id="savePost" type="button">Запази публикацията</button>
+        <button class="ghost" id="copyPost" type="button">Копирай текста</button>
+      </div>
+      <p id="postStatus" class="subtitle"></p>
+    </div>
+  `;
+}
 
 function idea() {
   return `<h1>Моя идея</h1><p class="subtitle">Добави идея спонтанно, без да чакаш Content Hunter.</p><form id="ideaForm" class="card form-card"><label>Заглавие на идеята<input id="ideaTitle" required maxlength="140" placeholder="Напр. Какво трябва да знае родителят преди да купи имот за студент?"></label><label>Бележки<textarea id="ideaNotes" rows="5" placeholder="Какво искаш да кажем, покажем или проверим?"></textarea></label><button class="primary" type="submit">Запази идеята</button></form><div class="section-card"><h2>Запазени идеи</h2>${state.ideas.length ? state.ideas.map((item,index) => `<div class="list-item"><div><strong>${esc(item.title)}</strong><p>${esc(item.notes || "Без бележки")}</p><small>${esc(item.created_at || "")}</small></div><button class="ghost delete" data-index="${index}">Изтрий</button></div>`).join("") : '<div class="empty card">Все още няма идеи.</div>'}</div>`;
@@ -155,6 +210,53 @@ async function render(route = "dashboard") {
   if (profileForm) profileForm.addEventListener("submit", async event => { event.preventDefault(); const { error } = await supabaseClient.from("profiles").upsert({ id: state.user.id, full_name: document.querySelector("#profileName").value.trim(), updated_at: new Date().toISOString() }); alert(error ? "Грешка при запис: " + error.message : "Профилът е записан."); });
   const brandProfilesForm = document.querySelector("#brandProfilesForm");
   if (brandProfilesForm) brandProfilesForm.addEventListener("submit", async event => { event.preventDefault(); if (!state.brand) { alert("Брандът още не е създаден."); return; } const { data, error } = await supabaseClient.from("brands").update({ instagram_url: document.querySelector("#instagramUrl").value.trim(), facebook_url: document.querySelector("#facebookUrl").value.trim(), tiktok_url: document.querySelector("#tiktokUrl").value.trim(), whatsapp_url: document.querySelector("#whatsappUrl").value.trim() }).eq("id", state.brand.id).select("*").single(); if (error) { alert("Грешка при запис: " + error.message); return; } state.brand = data; alert("Социалните профили са записани."); });
+  const generatePost = document.querySelector("#generatePost");
+  if (generatePost) generatePost.addEventListener("click", async () => {
+    const selectedId = document.querySelector("#postTopic")?.value;
+    const manualTopic = document.querySelector("#manualPostTopic")?.value.trim();
+    const selected = state.topics.find(t => String(t.id) === String(selectedId));
+    const topic = (selected?.title || selected?.name || manualTopic || "").trim();
+    const target = document.querySelector("#generatedPost");
+    if (!topic) {
+      if (target) target.innerHTML = '<div class="empty card"><strong>Избери или въведи тема.</strong></div>';
+      return;
+    }
+    const post = buildPost(topic);
+    if (target) target.innerHTML = generatedPostHtml(post);
+    const copyPost = document.querySelector("#copyPost");
+    if (copyPost) copyPost.addEventListener("click", async () => {
+      const textToCopy = [document.querySelector("#postContent")?.value, document.querySelector("#postCta")?.value, document.querySelector("#postHashtags")?.value].filter(Boolean).join("\n\n");
+      await navigator.clipboard.writeText(textToCopy);
+      document.querySelector("#postStatus").textContent = "Копирано. Можеш да го поставиш във Facebook или Instagram.";
+    });
+    const savePost = document.querySelector("#savePost");
+    if (savePost) savePost.addEventListener("click", async () => {
+      if (!supabaseClient || !state.user) {
+        document.querySelector("#postStatus").textContent = "Готово за копиране. Няма активен вход за запис в Supabase.";
+        return;
+      }
+      const payload = {
+        user_id: state.user.id,
+        brand_id: state.brand?.id || null,
+        topic_id: selected?.id || null,
+        title: post.title,
+        content: document.querySelector("#postContent").value,
+        cta: document.querySelector("#postCta").value,
+        hashtags: document.querySelector("#postHashtags").value,
+        alt_text: document.querySelector("#postAlt").value,
+        visual_task: document.querySelector("#postVisual").value,
+        status: "draft"
+      };
+      const result = await supabaseClient.from("posts").insert(payload).select("*").single();
+      if (result.error) {
+        document.querySelector("#postStatus").textContent = "Публикацията е генерирана, но не беше записана: " + result.error.message;
+        return;
+      }
+      state.posts.unshift(result.data);
+      document.querySelector("#postStatus").textContent = "Публикацията е записана като Draft.";
+    });
+  });
+
   const form = document.querySelector("#ideaForm");
   if (form) form.addEventListener("submit", async event => { event.preventDefault(); if (!supabaseClient || !state.user) { alert("Няма активен вход в системата."); return; } const { error } = await supabaseClient.from("manual_ideas").insert({ user_id: state.user.id, brand_id: state.brand?.id || null, title: document.querySelector("#ideaTitle").value.trim(), notes: document.querySelector("#ideaNotes").value.trim() }); if (error) { alert("Грешка при запис: " + error.message); return; } await render("idea"); });
   document.querySelectorAll(".delete").forEach(button => button.addEventListener("click", async () => { if (!supabaseClient || !state.user) return; const item = state.ideas[Number(button.dataset.index)]; const { error } = await supabaseClient.from("manual_ideas").delete().eq("id", item.id); if (error) { alert("Грешка при изтриване: " + error.message); return; } await render("idea"); }));
