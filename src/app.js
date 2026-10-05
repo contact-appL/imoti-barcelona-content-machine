@@ -83,7 +83,6 @@ function dashboard() {
     <div class="card section-card"><h2>Следваща стъпка</h2><p>Когато свържем Supabase, тези данни ще станат лични за твоя workspace и няма да се губят при смяна на устройство.</p></div>
   `;
 }
-
 function inbox() { return `<h1>Inbox</h1><p class="subtitle">Тук ще влизат 10-те най-релевантни теми от Content Hunter.</p><div class="empty card"><strong>Все още няма събрани теми.</strong><p>Inbox вече е свързан със Supabase и ще показва реални теми, когато Content Hunter започне да ги записва.</p></div>`; }
 function approved() { return placeholder("Одобрени теми","Тук ще се появяват темите, които си одобрила от Inbox."); }
 function create() { return placeholder("Създай публикация","Избираш тема и получаваш основен FB/Instagram текст, CTA, точно 5 hashtags, alt text, източник и визуална задача."); }
@@ -111,7 +110,11 @@ async function profile() {
   } catch (error) { console.error("Profile page failed:", error); return `<h1>Моят профил</h1><div class="empty card"><strong>Профилът не можа да се зареди.</strong><p>Системата е влязла успешно, но има проблем при зареждането на данните. Не е необходимо да променяш нищо — ще го поправим от системата.</p></div>`; }
 }
 function settings() { return placeholder("Настройки","Тук ще управляваме честота, предпочитани часове, източници, формати и други настройки."); }
-function integrations() { return `<h1>Интеграции</h1><p class="subtitle">Само реално свързани услуги ще бъдат показвани като активни.</p><div class="grid"><div class="card"><h3>Supabase</h3><span class="badge">Не е свързан</span><p>Ще съхранява workspace, теми, публикации и настройки.</p></div><div class="card"><h3>Meta</h3><span class="badge">Не е свързан</span><p>Ще публикува/насрочва към Facebook и Instagram след проверка на разрешенията.</p></div></div>`; }
+function integrations() {
+  const supabaseStatus = supabaseClient ? "Свързан" : "Не е свързан";
+  const supabaseClass = supabaseClient ? "connected" : "disconnected";
+  return `<h1>Интеграции</h1><p class="subtitle">Тук виждаш реалното състояние на интеграциите. Няма да маркираме услуга като свързана, ако няма истинска интеграция.</p><div class="grid"><div class="card"><h3>Supabase</h3><span class="badge ${supabaseClass}">${supabaseStatus}</span><p>${supabaseClient ? "Supabase е активен: входът работи и приложението чете/записва данни от твоя workspace." : "Supabase не е конфигуриран в приложението."}</p></div><div class="card"><h3>Meta</h3><span class="badge disconnected">Не е свързан</span><p>Facebook/Instagram профилите могат да бъдат записани като адреси, но реалното Meta OAuth свързване и разрешенията за публикуване още не са настроени.</p><p><strong>Следваща фаза:</strong> свързване на Meta OAuth, Facebook Page и Instagram Business/Professional account.</p></div><div class="card"><h3>WhatsApp</h3><span class="badge disconnected">Не е свързан</span><p>В момента имаме WhatsApp контакт/линк, но не и WhatsApp Business API интеграция.</p></div></div>`;
+}
 function placeholder(title,text) { return `<h1>${title}</h1><p class="subtitle">${text}</p><div class="empty card"><strong>Подготвено за следващата фаза.</strong><p>Няма да симулираме функционалност, която още не е свързана.</p></div>`; }
 
 const pages = {dashboard, inbox, approved, create, idea, calendar, archive, profile, brand, settings, integrations};
