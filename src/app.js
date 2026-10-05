@@ -247,12 +247,23 @@ async function render(route = "dashboard") {
         visual_task: document.querySelector("#postVisual").value,
         status: "draft"
       };
-      const result = await supabaseClient.from("posts").insert(payload).select("*").single();
-      if (result.error) {
-        document.querySelector("#postStatus").textContent = "Публикацията е генерирана, но не беше записана: " + result.error.message;
+      let data = null;
+      let error = null;
+      const adaptivePayload = { ...payload };
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        const result = await supabaseClient.from("posts").insert(adaptivePayload).select("*").single();
+        data = result.data;
+        error = result.error;
+        if (!error) break;
+        const match = String(error.message || "").match(/Could not find the '([^']+)' column of 'posts'/i);
+        if (!match || !(match[1] in adaptivePayload)) break;
+        delete adaptivePayload[match[1]];
+      }
+      if (error) {
+        document.querySelector("#postStatus").textContent = "Публикацията е генерирана, но не беше записана: " + error.message;
         return;
       }
-      state.posts.unshift(result.data);
+      state.posts.unshift(data);
       document.querySelector("#postStatus").textContent = "Публикацията е записана като Draft.";
     });
   });
